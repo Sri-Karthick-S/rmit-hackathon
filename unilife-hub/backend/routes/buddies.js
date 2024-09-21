@@ -1,29 +1,23 @@
+// routes/buddies.js
 const express = require('express');
 const Buddy = require('../models/Buddy');
-const auth = require('../middleware/auth');
 
 const router = express.Router();
 
-router.post('/', auth, async (req, res) => {
-  const buddy = new Buddy({
-    ...req.body,
-    user: req.user._id
-  });
-
+router.get('/', async (req, res) => {
   try {
-    await buddy.save();
-    res.status(201).send(buddy);
-  } catch (error) {
-    res.status(400).send(error);
-  }
-});
+    const { subject, semester, skills } = req.query;
+    let query = {};
 
-router.get('/', auth, async (req, res) => {
-  try {
-    const buddies = await Buddy.find().populate('user', 'username');
-    res.send(buddies);
-  } catch (error) {
-    res.status(500).send();
+    if (subject) query.subjects = { $regex: subject, $options: 'i' };
+    if (semester) query.semester = semester;
+    if (skills) query.skills = { $in: skills.split(',').map(skill => new RegExp(skill.trim(), 'i')) };
+
+    const buddies = await Buddy.find(query);
+    res.json(buddies);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
   }
 });
 
